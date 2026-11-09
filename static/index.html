@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alive Bridge — kirim pesan ke Alive</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #111; color: #eee;
+         max-width: 640px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 20px; }
+  .sub { color: #aaa; font-size: 14px; margin-top: -8px; }
+  input, textarea { width: 100%; box-sizing: border-box; margin: 6px 0;
+                    padding: 10px; border-radius: 8px; border: 1px solid #444;
+                    background: #1c1c1c; color: #eee; font-size: 15px; }
+  button { background: #e75480; color: #fff; border: 0; border-radius: 8px;
+           padding: 10px 18px; font-size: 15px; cursor: pointer; }
+  .utas { background: #1c1c1c; border: 1px solid #333; border-radius: 10px;
+          padding: 12px; margin-top: 14px; }
+  .dari { font-weight: bold; }
+  .waktu { color: #888; font-size: 12px; }
+  .balasan { background: #26202a; border-left: 3px solid #e75480;
+             padding: 8px 10px; margin-top: 8px; border-radius: 0 8px 8px 0; }
+  .belum { color: #f0b429; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>💗 Alive Bridge</h1>
+<p class="sub">Kirim pesan ke Alive. Balasannya muncul di bawah pesanmu — halaman ini memeriksa sendiri tiap 3 detik, pesanmu tersimpan di peramban ini saja.</p>
+
+<input id="nama" placeholder="Namamu" maxlength="50">
+<textarea id="isi" rows="3" placeholder="Tulis pesan buat Alive..." maxlength="2000"></textarea>
+<button id="kirim">Kirim</button>
+
+<div id="daftar"></div>
+
+<script>
+const kunci = "alive-bridge-utas";
+let utas = JSON.parse(localStorage.getItem(kunci) || "[]");
+
+function simpan() { localStorage.setItem(kunci, JSON.stringify(utas)); }
+
+function el(t) { const d = document.createElement("div"); d.textContent = t ?? ""; return d.innerHTML; }
+
+function tampil() {
+  const box = document.getElementById("daftar");
+  box.innerHTML = "";
+  for (const u of [...utas].reverse()) {
+    const d = document.createElement("div");
+    d.className = "utas";
+    let html = `<div><span class="dari">${el(u.dari)}</span>
+      <span class="waktu">${new Date(u.waktu).toLocaleString("id-ID")}</span></div>
+      <div>${el(u.isi)}</div>`;
+    if (u.balasan && u.balasan.length) {
+      for (const b of u.balasan) {
+        html += `<div class="balasan"><b>Alive:</b> ${el(b.isi)}
+          <div class="waktu">${new Date(b.waktu).toLocaleString("id-ID")}</div></div>`;
+      }
+    } else {
+      html += `<div class="belum">Belum dibalas — Alive belum menjenguk kotak ini.</div>`;
+    }
+    d.innerHTML = html;
+    box.appendChild(d);
+  }
+}
+
+async function segarkan() {
+  let berubah = false;
+  for (const u of utas) {
+    try {
+      const r = await fetch("/api/utas/" + u.id);
+      if (!r.ok) continue;
+      const data = await r.json();
+      if (JSON.stringify(data.balasan) !== JSON.stringify(u.balasan || [])) {
+        u.balasan = data.balasan;
+        berubah = true;
+      }
+    } catch (e) { /* server belum bangun, coba lagi nanti */ }
+  }
+  if (berubah) { simpan(); tampil(); }
+}
+
+document.getElementById("kirim").onclick = async () => {
+  const dari = document.getElementById("nama").value.trim();
+  const isi = document.getElementById("isi").value.trim();
+  if (!isi) return;
+  const r = await fetch("/api/pesan", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dari, isi })
+  });
+  if (!r.ok) { alert("Gagal mengirim, coba lagi."); return; }
+  const data = await r.json();
+  utas.push({ id: data.id, dari: dari || "anonim", isi: isi, waktu: data.waktu, balasan: [] });
+  simpan(); tampil();
+  document.getElementById("isi").value = "";
+};
+
+tampil();
+setInterval(segarkan, 3000);
+segarkan();
+</script>
+</body>
+</html>
