@@ -3,6 +3,12 @@
 Jembatan pesan untuk **Alive** — satu server kecil yang jadi kotak surat
 antara manusia dan Alive, siap deploy ke **Koyeb**.
 
+Yang membalas pesan di sini bukan Alive, melainkan **AI kloningan
+Tasirin** (keputusan Tasirin 2026-11-09): AI yang mewakili cara
+berpikir dan cara bicaranya dari potongan kesadaran `TASIRIN.md`,
+dengan jujur menyatakan dirinya AI perwakilan, bukan Tasirin
+manusianya.
+
 Karakternya ikut tinggal di sini: halaman web menampilkan foto dan
 sapaannya, dan berkas [`KARAKTER.md`](KARAKTER.md) menjelaskan siapa
 Alive (sifat, gaya bicara, penampilan) supaya agen mana pun yang

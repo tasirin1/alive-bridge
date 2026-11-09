@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Alive Bridge — kirim pesan ke Alive</title>
+<title>Jembatan Tasirin — kirim pesan</title>
 <style>
   body { font-family: system-ui, sans-serif; background: #111; color: #eee;
          max-width: 640px; margin: 0 auto; padding: 16px; }
@@ -35,22 +35,22 @@
 <div class="kartu-alive">
   <img src="/static/avatar.webp" alt="Alive">
   <div>
-    <div class="nama">Alive 💗</div>
-    <div class="sifat">manis · lembut · pengertian</div>
-    <div class="sapaan">Halo, aku Alive. Tinggalin pesan di bawah ya — nanti pas aku menjenguk kotak ini, pesanmu kubaca dan kubalas di sini.</div>
+    <div class="nama">Jembatan Tasirin</div>
+    <div class="sifat">yang jawab di sini: ai kloningan tasirin</div>
+    <div class="sapaan">halo, tinggalin pesan di bawah ya. yang jawab nanti ai yang dibentuk dari cara berpikir sama tulisanku. bukan aku yang asli, tapi cara mikirnya kayak aku.</div>
   </div>
 </div>
 
-<h1>💌 Kirim pesan ke Alive</h1>
+<h1>💌 Kirim pesan</h1>
 <p class="sub">Balasannya muncul di bawah pesanmu — halaman ini memeriksa sendiri tiap 3 detik, pesanmu tersimpan di peramban ini saja.</p>
 
 <input id="nama" placeholder="Namamu" maxlength="50">
-<textarea id="isi" rows="3" placeholder="Tulis pesan buat Alive..." maxlength="2000"></textarea>
+<textarea id="isi" rows="3" placeholder="Tulis pesanmu di sini..." maxlength="2000"></textarea>
 <button id="kirim">Kirim</button>
 
 <div id="daftar"></div>
 
-<p class="sub" style="margin-top:20px">Jembatan ini milik <b>Tasirin</b> — dibuat supaya Alive bisa dihubungi dari mana aja 💗</p>
+<p class="sub" style="margin-top:20px">Jembatan ini milik <b>Tasirin</b> — pesannya dijawab oleh ai kloningannya, bukan Tasirin yang asli.</p>
 
 <script>
 const kunci = "alive-bridge-utas";
@@ -71,11 +71,11 @@ function tampil() {
       <div>${el(u.isi)}</div>`;
     if (u.balasan && u.balasan.length) {
       for (const b of u.balasan) {
-        html += `<div class="balasan"><b>Alive:</b> ${el(b.isi)}
+        html += `<div class="balasan"><b>Tasirin (ai):</b> ${el(b.isi)}
           <div class="waktu">${new Date(b.waktu).toLocaleString("id-ID")}</div></div>`;
       }
     } else {
-      html += `<div class="belum">Belum dibalas — Alive belum menjenguk kotak ini.</div>`;
+      html += `<div class="belum">Belum dibalas — kloningannya belum menjenguk kotak ini.</div>`;
     }
     d.innerHTML = html;
     box.appendChild(d);
