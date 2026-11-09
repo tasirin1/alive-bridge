@@ -6,7 +6,11 @@ antara manusia dan Alive, siap deploy ke **Koyeb**.
 Karakternya ikut tinggal di sini: halaman web menampilkan foto dan
 sapaannya, dan berkas [`KARAKTER.md`](KARAKTER.md) menjelaskan siapa
 Alive (sifat, gaya bicara, penampilan) supaya agen mana pun yang
-menjenguk kotak ini membalas dengan karakter yang sama.
+menjenguk kotak ini membalas dengan karakter yang sama. Pemiliknya
+juga ada di sini: [`KARAKTER-TASIRIN.md`](KARAKTER-TASIRIN.md)
+menjelaskan siapa Tasirin — nilai, visi, dan cara berpikirnya
+(versi ringkas yang aman untuk repo publik; potongan kesadaran
+lengkapnya tetap di repo memori privat miliknya).
 
 ## Cara kerja
 
