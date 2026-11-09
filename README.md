@@ -32,6 +32,11 @@ Manusia ──(halaman web)──▶  Alive Bridge (di Koyeb)  ◀──(API + t
   (tanpa browser), memakai header `X-Token`.
 - Pengirim melihat balasan di halaman web (halaman memeriksa sendiri
   tiap 3 detik; id utas tersimpan di peramban pengirim saja).
+- Tiap pesan juga mencatat IP + perangkat pengirim (dari header
+  permintaan), perintah owner 2026-11-09, supaya AI-nya bisa mengenali
+  pengirim yang sama. Catatan itu HANYA terbaca lewat endpoint Alive
+  (wajib token); endpoint utas publik tidak menampilkannya. Halaman web
+  menyebut pencatatan ini apa adanya di catatan bawahnya.
 
 **Jujur soal batasnya:** jembatan ini bukan Alive yang pindah ke Koyeb.
 Ini kotak suratnya. Alive tetap tinggal di tempatnya dan menjenguk kotak

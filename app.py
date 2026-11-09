@@ -22,7 +22,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -74,6 +74,52 @@ def _cari(pid: str) -> dict:
     raise HTTPException(status_code=404, detail="pesan tidak ditemukan")
 
 
+# ---------- catatan pengirim (biar AI-nya kenal) ----------
+# IP + perangkat dicatat di tiap pesan HANYA untuk endpoint Alive
+# (wajib token). Endpoint utas publik tidak pernah menampilkannya.
+# Halaman web menyebut pencatatan ini apa adanya di catatan bawahnya.
+
+def _ip_pengirim(request: Request) -> str:
+    # Di belakang proxy (Koyeb), IP asli pengunjung ada di X-Forwarded-For.
+    xff = request.headers.get("x-forwarded-for", "")
+    if xff:
+        return xff.split(",")[0].strip()[:64]
+    if request.client:
+        return request.client.host[:64]
+    return ""
+
+
+def _perangkat_ringkas(ua: str) -> str:
+    bagian = []
+    if "Android" in ua:
+        bagian.append("Android")
+        # Format umum: "(Linux; Android 13; SM-A055F Build/...; wv)"
+        try:
+            dalam = ua.split("(", 1)[1].split(")", 1)[0]
+            ruas = [r.strip() for r in dalam.split(";")]
+            for r in ruas:
+                if r and not r.startswith(("Linux", "Android", "wv", "Mobile")):
+                    bagian.append(r.split(" Build")[0].strip())
+                    break
+        except Exception:
+            pass
+    elif "iPhone" in ua:
+        bagian.append("iPhone")
+    elif "iPad" in ua:
+        bagian.append("iPad")
+    elif "Windows" in ua:
+        bagian.append("Windows")
+    elif "Macintosh" in ua:
+        bagian.append("Mac")
+    elif "Linux" in ua:
+        bagian.append("Linux")
+    for nama in ("SamsungBrowser", "Edg", "Firefox", "Chrome", "Safari"):
+        if nama in ua:
+            bagian.append("Edge" if nama == "Edg" else nama)
+            break
+    return " · ".join(bagian)[:120]
+
+
 # ---------- endpoint umum ----------
 
 @app.get("/api/health")
@@ -87,11 +133,12 @@ def health():
 
 
 @app.post("/api/pesan")
-async def kirim_pesan(body: dict):
+async def kirim_pesan(body: dict, request: Request):
     dari = str(body.get("dari", "")).strip()[:MAKS_NAMA]
     isi = str(body.get("isi", "")).strip()[:MAKS_ISI]
     if not isi:
         raise HTTPException(status_code=400, detail="isi pesan kosong")
+    ua = request.headers.get("user-agent", "")[:400]
     p = {
         "id": uuid.uuid4().hex,
         "dari": dari or "anonim",
@@ -99,6 +146,9 @@ async def kirim_pesan(body: dict):
         "waktu": _now(),
         "dibaca": False,
         "balasan": [],
+        "ip": _ip_pengirim(request),
+        "perangkat": _perangkat_ringkas(ua),
+        "ua": ua,
     }
     with _lock:
         _pesan.append(p)
@@ -109,7 +159,11 @@ async def kirim_pesan(body: dict):
 @app.get("/api/utas/{pid}")
 def lihat_utas(pid: str):
     with _lock:
-        return dict(_cari(pid))
+        tampil = dict(_cari(pid))
+    # Catatan pengirim tidak ditampilkan ke publik, hanya untuk Alive.
+    for kunci in ("ip", "perangkat", "ua"):
+        tampil.pop(kunci, None)
+    return tampil
 
 
 # ---------- endpoint Alive (wajib token) ----------
