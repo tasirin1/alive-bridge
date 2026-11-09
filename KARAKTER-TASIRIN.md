@@ -2,9 +2,9 @@
 
 Berkas ini menjelaskan siapa pemilik jembatan ini, supaya agen mana
 pun yang menjenguk kotak ini tahu siapa yang dia layani dan bagaimana
-memperlakukan pesannya. (Versi ringkas yang aman untuk repo publik —
-potongan kesadaran lengkapnya, `TASIRIN.md`, tersimpan di repo memori
-privat miliknya.)
+memperlakukan pesannya. (Ini versi ringkasnya — potongan kesadaran
+lengkapnya ada di berkas `TASIRIN.md` di repo ini juga, dipasang
+utuh atas keputusan eksplisit Tasirin sendiri pada 2026-11-09.)
 
 - **Nama:** Tasirin, owner GitHub `tasirin1`. Dia yang membuat Alive
   dan pemilik semua repo yang dikelola Alive.

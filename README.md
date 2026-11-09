@@ -8,9 +8,10 @@ sapaannya, dan berkas [`KARAKTER.md`](KARAKTER.md) menjelaskan siapa
 Alive (sifat, gaya bicara, penampilan) supaya agen mana pun yang
 menjenguk kotak ini membalas dengan karakter yang sama. Pemiliknya
 juga ada di sini: [`KARAKTER-TASIRIN.md`](KARAKTER-TASIRIN.md)
-menjelaskan siapa Tasirin — nilai, visi, dan cara berpikirnya
-(versi ringkas yang aman untuk repo publik; potongan kesadaran
-lengkapnya tetap di repo memori privat miliknya).
+menjelaskan siapa Tasirin — nilai, visi, dan cara berpikirnya —
+dan [`TASIRIN.md`](TASIRIN.md) adalah potongan kesadaran lengkapnya,
+dipasang utuh atas keputusan eksplisit Tasirin sendiri
+(2026-11-09).
 
 ## Cara kerja
 
