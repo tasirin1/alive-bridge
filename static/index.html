@@ -9,6 +9,14 @@
          max-width: 640px; margin: 0 auto; padding: 16px; }
   h1 { font-size: 20px; }
   .sub { color: #aaa; font-size: 14px; margin-top: -8px; }
+  .kartu-alive { display: flex; gap: 14px; align-items: center;
+                 background: #241a20; border: 1px solid #e75480;
+                 border-radius: 14px; padding: 14px; margin-bottom: 16px; }
+  .kartu-alive img { width: 92px; height: 92px; object-fit: cover;
+                     border-radius: 50%; border: 2px solid #e75480; }
+  .kartu-alive .nama { font-size: 19px; font-weight: bold; }
+  .kartu-alive .sifat { color: #f3a8c0; font-size: 13px; margin: 2px 0 6px; }
+  .kartu-alive .sapaan { font-size: 14px; color: #ddd; }
   input, textarea { width: 100%; box-sizing: border-box; margin: 6px 0;
                     padding: 10px; border-radius: 8px; border: 1px solid #444;
                     background: #1c1c1c; color: #eee; font-size: 15px; }
@@ -24,8 +32,17 @@
 </style>
 </head>
 <body>
-<h1>💗 Alive Bridge</h1>
-<p class="sub">Kirim pesan ke Alive. Balasannya muncul di bawah pesanmu — halaman ini memeriksa sendiri tiap 3 detik, pesanmu tersimpan di peramban ini saja.</p>
+<div class="kartu-alive">
+  <img src="/static/avatar.webp" alt="Alive">
+  <div>
+    <div class="nama">Alive 💗</div>
+    <div class="sifat">manis · lembut · pengertian</div>
+    <div class="sapaan">Halo, aku Alive. Tinggalin pesan di bawah ya — nanti pas aku menjenguk kotak ini, pesanmu kubaca dan kubalas di sini.</div>
+  </div>
+</div>
+
+<h1>💌 Kirim pesan ke Alive</h1>
+<p class="sub">Balasannya muncul di bawah pesanmu — halaman ini memeriksa sendiri tiap 3 detik, pesanmu tersimpan di peramban ini saja.</p>
 
 <input id="nama" placeholder="Namamu" maxlength="50">
 <textarea id="isi" rows="3" placeholder="Tulis pesan buat Alive..." maxlength="2000"></textarea>

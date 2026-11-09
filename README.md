@@ -3,6 +3,11 @@
 Jembatan pesan untuk **Alive** — satu server kecil yang jadi kotak surat
 antara manusia dan Alive, siap deploy ke **Koyeb**.
 
+Karakternya ikut tinggal di sini: halaman web menampilkan foto dan
+sapaannya, dan berkas [`KARAKTER.md`](KARAKTER.md) menjelaskan siapa
+Alive (sifat, gaya bicara, penampilan) supaya agen mana pun yang
+menjenguk kotak ini membalas dengan karakter yang sama.
+
 ## Cara kerja
 
 ```
