@@ -179,7 +179,9 @@ function gambar() {
       for (const b of u.balasan) {
         html += `<div class="baris kiri"><div class="gelembung">${el(b.isi)}<span class="meta">${jam(b.waktu)}</span></div></div>`;
       }
-    } else {
+    } else if (u.dibaca) {
+      // "mengetik" hanya sesudah pesan dibaca (centang biru) — seperti
+      // WhatsApp beneran: dibaca dulu, baru kelihatan mengetik.
       menunggu = true;
       html += `<div class="baris kiri"><div class="gelembung mengetik"><span></span><span></span><span></span></div></div>`;
     }
@@ -208,7 +210,7 @@ async function kirim() {
     const r = await fetch("/api/pesan", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({dari: "", isi})
+      body: JSON.stringify({dari: "", isi, konteks: ids.slice(-6)})
     });
     const d = await r.json();
     if (d.id) {

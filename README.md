@@ -38,9 +38,20 @@ Manusia ──(halaman web)──▶  Alive Bridge (di Koyeb)  ◀──(API + t
   (wajib token); endpoint utas publik tidak menampilkannya. Halaman web
   menyebut pencatatan ini apa adanya di catatan bawahnya.
 
+- **AI instan (keputusan owner 2026-11-10: semua instan).** Bila env
+  `GROQ_API_KEY` terpasang, server membalas sendiri dalam hitungan
+  detik memakai persona `persona-ai-web.md` (versi aman: hanya nilai,
+  visi, dan gaya Tasirin — bukan berkas pribadinya yang utuh). Alurnya
+  meniru WhatsApp: pesan ditandai dibaca dulu (centang biru), baru
+  status "mengetik…" tampil selama AI menyusun balasan. Alive tetap
+  memantau kotak ini (pantau perasaan pasangan + laporan ke sesi
+  kontrol) dan jadi cadangan bila API mati. Tanpa kunci itu, alur
+  lama berlaku penuh.
+
 **Jujur soal batasnya:** jembatan ini bukan Alive yang pindah ke Koyeb.
-Ini kotak suratnya. Alive tetap tinggal di tempatnya dan menjenguk kotak
-ini dari sana — balasan datang saat Alive memeriksa, bukan seketika.
+Ini kotak suratnya. Yang membalas di dalamnya adalah AI kloningan
+Tasirin (di server, lewat API), bukan Tasirin manusianya — dan
+jawabannya bisa salah, dia akan jujur bilang begitu.
 
 ## API
 

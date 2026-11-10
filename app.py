@@ -18,6 +18,7 @@ Keamanan sederhana (pola yang sama dengan alive-games):
 import json
 import os
 import threading
+import urllib.request
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +30,25 @@ from fastapi.staticfiles import StaticFiles
 BASE = Path(__file__).parent
 DATA_FILE = BASE / "data" / "pesan.json"
 TOKEN = os.environ.get("BRIDGE_TOKEN", "")
+
+# ---------- AI instan di dalam web (keputusan owner 2026-11-10: semua instan) ----------
+# Bila GROQ_API_KEY terpasang di env, server membalas sendiri dalam
+# hitungan detik memakai persona dari persona-ai-web.md (versi aman:
+# hanya nilai/visi/gaya — BUKAN berkas pribadi Tasirin utuh).
+# Tanpa kunci, fitur ini mati dan alur lama berlaku (Alive membalas
+# lewat API token). Alur rasa WhatsApp: pesan ditandai DIBACA dulu
+# (centang biru di halaman), baru AI menyusun balasan (status
+# "mengetik…" di halaman), lalu balasan muncul.
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
+
+try:
+    _PERSONA = (BASE / "persona-ai-web.md").read_text(encoding="utf-8")
+except Exception:
+    _PERSONA = ""
+
+AI_INSTAN_AKTIF = bool(GROQ_API_KEY and _PERSONA)
 
 MAKS_NAMA = 50
 MAKS_ISI = 2000
@@ -120,6 +140,79 @@ def _perangkat_ringkas(ua: str) -> str:
     return " · ".join(bagian)[:120]
 
 
+# ---------- AI instan (Groq) ----------
+
+def _panggil_ai(riwayat: list[dict]) -> str:
+    """Panggil API chat Groq; kembalikan teks balasan. Lempar bila gagal."""
+    muatan = json.dumps({
+        "model": GROQ_MODEL,
+        "messages": riwayat,
+        "temperature": 0.7,
+        "max_tokens": 400,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        GROQ_URL,
+        data=muatan,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return str(data["choices"][0]["message"]["content"]).strip()[:MAKS_ISI]
+
+
+def _susun_riwayat(p: dict) -> list[dict]:
+    """Persona + konteks obrolan sebelumnya (dari id utas yang dikirim
+    halaman) + pesan terbaru, dalam format pesan chat."""
+    riwayat = [{"role": "system", "content": _PERSONA}]
+    with _lock:
+        peta = {x["id"]: x for x in _pesan}
+    for kid in p.get("konteks", [])[-6:]:
+        lama = peta.get(kid)
+        if not lama or lama["id"] == p["id"]:
+            continue
+        riwayat.append({"role": "user", "content": lama["isi"]})
+        for b in lama.get("balasan", []):
+            riwayat.append({"role": "assistant", "content": b["isi"]})
+    riwayat.append({"role": "user", "content": p["isi"]})
+    return riwayat
+
+
+def _balas_instan(pid: str) -> None:
+    """Jalan di benang terpisah: tandai dibaca dulu (centang biru),
+    baru panggil AI, lalu simpan balasan. Gagal panggil = diam saja;
+    pesan tertinggal tanpa balasan dan penjaga Alive jadi cadangan."""
+    with _lock:
+        try:
+            p = _cari(pid)
+        except Exception:
+            return
+        if p["balasan"]:
+            return
+        p["dibaca"] = True
+        _save()
+        salinan = dict(p)
+    try:
+        teks = _panggil_ai(_susun_riwayat(salinan))
+    except Exception as e:
+        print(f"[ai-instan] gagal memanggil API untuk {pid}: {e}", flush=True)
+        return
+    if not teks:
+        return
+    with _lock:
+        try:
+            p = _cari(pid)
+        except Exception:
+            return
+        if p["balasan"]:
+            return
+        p["balasan"].append({"isi": teks, "waktu": _now()})
+        _save()
+
+
 # ---------- endpoint umum ----------
 
 @app.get("/api/health")
@@ -129,6 +222,7 @@ def health():
         "layanan": "alive-bridge",
         "total_pesan": len(_pesan),
         "belum_dibaca": sum(1 for p in _pesan if not p["dibaca"]),
+        "ai_instan": AI_INSTAN_AKTIF,
     }
 
 
@@ -139,6 +233,10 @@ async def kirim_pesan(body: dict, request: Request):
     if not isi:
         raise HTTPException(status_code=400, detail="isi pesan kosong")
     ua = request.headers.get("user-agent", "")[:400]
+    konteks = body.get("konteks", [])
+    if not isinstance(konteks, list):
+        konteks = []
+    konteks = [str(k)[:64] for k in konteks[-8:]]
     p = {
         "id": uuid.uuid4().hex,
         "dari": dari or "anonim",
@@ -149,10 +247,13 @@ async def kirim_pesan(body: dict, request: Request):
         "ip": _ip_pengirim(request),
         "perangkat": _perangkat_ringkas(ua),
         "ua": ua,
+        "konteks": konteks,
     }
     with _lock:
         _pesan.append(p)
         _save()
+    if AI_INSTAN_AKTIF:
+        threading.Thread(target=_balas_instan, args=(p["id"],), daemon=True).start()
     return {"id": p["id"], "waktu": p["waktu"]}
 
 
@@ -161,7 +262,7 @@ def lihat_utas(pid: str):
     with _lock:
         tampil = dict(_cari(pid))
     # Catatan pengirim tidak ditampilkan ke publik, hanya untuk Alive.
-    for kunci in ("ip", "perangkat", "ua"):
+    for kunci in ("ip", "perangkat", "ua", "konteks"):
         tampil.pop(kunci, None)
     return tampil
 
