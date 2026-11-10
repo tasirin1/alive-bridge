@@ -83,6 +83,11 @@ MAKS_PESAN_TERSIMPAN = 500
 # menit dan AI instan mati untuk semua orang.
 JEDA_MIN_PESAN = 2.0        # detik antar pesan dari IP yang sama
 MAKS_PESAN_PER_JENDELA = 30  # per jendela waktu di bawah
+MAKS_PESAN_GLOBAL = 40      # semua IP digabung per jendela — pagar
+                            # terakhir jaga kuota (IP pengirim bisa
+                            # berputar per koneksi, terbukti di uji
+                            # live 2026-11-10: dua kiriman berurutan
+                            # tercatat dari dua IPv6 berbeda)
 JENDELA_LAJU = 600.0        # detik (10 menit)
 _laju: dict[str, list[float]] = {}
 _sema_ai = threading.Semaphore(4)  # panggilan AI serentak dibatasi
@@ -320,21 +325,27 @@ def health():
 
 
 def _cek_laju(ip: str) -> None:
-    """Tolak pesan yang terlalu rapat / terlalu banyak dari satu IP."""
-    if not ip:
-        return
+    """Tolak pesan yang terlalu rapat / terlalu banyak — per IP, plus
+    pagar global semua IP untuk menjaga kuota AI harian."""
     import time as _t
     kini = _t.monotonic()
     with _lock:
-        riwayat = [t for t in _laju.get(ip, []) if kini - t < JENDELA_LAJU]
-        if riwayat and kini - riwayat[-1] < JEDA_MIN_PESAN:
+        semua = [t for t in _laju.get("__semua__", []) if kini - t < JENDELA_LAJU]
+        if len(semua) >= MAKS_PESAN_GLOBAL:
             raise HTTPException(status_code=429,
-                                detail="terlalu cepat, tunggu sebentar ya")
-        if len(riwayat) >= MAKS_PESAN_PER_JENDELA:
-            raise HTTPException(status_code=429,
-                                detail="terlalu banyak pesan, coba lagi nanti")
-        riwayat.append(kini)
-        _laju[ip] = riwayat
+                                detail="lagi rame, coba lagi sebentar lagi ya")
+        if ip:
+            riwayat = [t for t in _laju.get(ip, []) if kini - t < JENDELA_LAJU]
+            if riwayat and kini - riwayat[-1] < JEDA_MIN_PESAN:
+                raise HTTPException(status_code=429,
+                                    detail="terlalu cepat, tunggu sebentar ya")
+            if len(riwayat) >= MAKS_PESAN_PER_JENDELA:
+                raise HTTPException(status_code=429,
+                                    detail="terlalu banyak pesan, coba lagi nanti")
+            riwayat.append(kini)
+            _laju[ip] = riwayat
+        semua.append(kini)
+        _laju["__semua__"] = semua
 
 
 @app.post("/api/pesan")
