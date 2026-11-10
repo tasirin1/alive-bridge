@@ -56,6 +56,21 @@ except Exception:
     _PERSONA = ""
 
 AI_PROVIDER = "gemini" if GEMINI_API_KEY else ("groq" if GROQ_API_KEY else "")
+
+# Rantai cadangan (perintah owner 2026-11-10): provider utama dicoba
+# dulu; bila gagal (kuota habis, API mati, dsb.) otomatis pindah ke
+# provider berikutnya yang kuncinya terpasang. Bila semua gagal, pesan
+# tertinggal tanpa balasan dan penjaga Alive jadi cadangan terakhir.
+AI_RANTAI = []
+if GEMINI_API_KEY:
+    AI_RANTAI.append("gemini")
+if GROQ_API_KEY:
+    AI_RANTAI.append("groq")
+if AI_PROVIDER and AI_PROVIDER in AI_RANTAI:
+    AI_RANTAI.remove(AI_PROVIDER)
+    AI_RANTAI.insert(0, AI_PROVIDER)
+AI_CADANGAN = AI_RANTAI[1] if len(AI_RANTAI) > 1 else ""
+
 AI_INSTAN_AKTIF = bool(AI_PROVIDER and _PERSONA)
 
 MAKS_NAMA = 50
@@ -206,9 +221,20 @@ def _panggil_gemini(riwayat: list[dict]) -> str:
 
 
 def _panggil_ai(riwayat: list[dict]) -> str:
-    if AI_PROVIDER == "gemini":
-        return _panggil_gemini(riwayat)
-    return _panggil_groq(riwayat)
+    """Coba provider utama dulu, lalu cadangan berikutnya dalam rantai.
+    Lempar galat terakhir bila semua provider gagal."""
+    galat_terakhir: Exception | None = None
+    for nama in AI_RANTAI:
+        try:
+            if nama == "gemini":
+                return _panggil_gemini(riwayat)
+            return _panggil_groq(riwayat)
+        except Exception as e:
+            galat_terakhir = e
+            print(f"[ai-instan] provider {nama} gagal: {e}", flush=True)
+    if galat_terakhir is not None:
+        raise galat_terakhir
+    raise RuntimeError("tidak ada provider AI yang terpasang")
 
 
 def _susun_riwayat(p: dict) -> list[dict]:
@@ -271,6 +297,7 @@ def health():
         "belum_dibaca": sum(1 for p in _pesan if not p["dibaca"]),
         "ai_instan": AI_INSTAN_AKTIF,
         "ai_provider": AI_PROVIDER or None,
+        "ai_cadangan": AI_CADANGAN or None,
     }
 
 
