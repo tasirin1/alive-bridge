@@ -77,6 +77,16 @@ MAKS_NAMA = 50
 MAKS_ISI = 2000
 MAKS_PESAN_TERSIMPAN = 500
 
+# Batas laju per IP (audit 2026-11-10): endpoint kirim terbuka, dan
+# tiap pesan memicu panggilan AI berbatas kuota harian — tanpa batas
+# ini, satu pengirim iseng bisa menghabiskan kuota AI dalam hitungan
+# menit dan AI instan mati untuk semua orang.
+JEDA_MIN_PESAN = 2.0        # detik antar pesan dari IP yang sama
+MAKS_PESAN_PER_JENDELA = 30  # per jendela waktu di bawah
+JENDELA_LAJU = 600.0        # detik (10 menit)
+_laju: dict[str, list[float]] = {}
+_sema_ai = threading.Semaphore(4)  # panggilan AI serentak dibatasi
+
 app = FastAPI(title="Alive Bridge")
 
 _lock = threading.Lock()
@@ -91,6 +101,9 @@ def _load() -> None:
             _pesan.extend(json.loads(DATA_FILE.read_text()))
         except Exception:
             pass
+    # Samakan isi memori dengan yang disimpan (dulu memori tumbuh
+    # tanpa batas selama server hidup; hanya berkasnya yang dipangkas).
+    del _pesan[:-MAKS_PESAN_TERSIMPAN]
 
 
 def _save() -> None:
@@ -268,11 +281,16 @@ def _balas_instan(pid: str) -> None:
         p["dibaca"] = True
         _save()
         salinan = dict(p)
+    if not _sema_ai.acquire(timeout=90):
+        print(f"[ai-instan] antrean AI penuh, lewati {pid}", flush=True)
+        return
     try:
         teks = _panggil_ai(_susun_riwayat(salinan))
     except Exception as e:
         print(f"[ai-instan] gagal memanggil API untuk {pid}: {e}", flush=True)
         return
+    finally:
+        _sema_ai.release()
     if not teks:
         return
     with _lock:
@@ -301,12 +319,31 @@ def health():
     }
 
 
+def _cek_laju(ip: str) -> None:
+    """Tolak pesan yang terlalu rapat / terlalu banyak dari satu IP."""
+    if not ip:
+        return
+    import time as _t
+    kini = _t.monotonic()
+    with _lock:
+        riwayat = [t for t in _laju.get(ip, []) if kini - t < JENDELA_LAJU]
+        if riwayat and kini - riwayat[-1] < JEDA_MIN_PESAN:
+            raise HTTPException(status_code=429,
+                                detail="terlalu cepat, tunggu sebentar ya")
+        if len(riwayat) >= MAKS_PESAN_PER_JENDELA:
+            raise HTTPException(status_code=429,
+                                detail="terlalu banyak pesan, coba lagi nanti")
+        riwayat.append(kini)
+        _laju[ip] = riwayat
+
+
 @app.post("/api/pesan")
 async def kirim_pesan(body: dict, request: Request):
     dari = str(body.get("dari", "")).strip()[:MAKS_NAMA]
     isi = str(body.get("isi", "")).strip()[:MAKS_ISI]
     if not isi:
         raise HTTPException(status_code=400, detail="isi pesan kosong")
+    _cek_laju(_ip_pengirim(request))
     ua = request.headers.get("user-agent", "")[:400]
     konteks = body.get("konteks", [])
     if not isinstance(konteks, list):
@@ -326,6 +363,7 @@ async def kirim_pesan(body: dict, request: Request):
     }
     with _lock:
         _pesan.append(p)
+        del _pesan[:-MAKS_PESAN_TERSIMPAN]
         _save()
     if AI_INSTAN_AKTIF:
         threading.Thread(target=_balas_instan, args=(p["id"],), daemon=True).start()

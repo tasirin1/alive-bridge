@@ -86,7 +86,7 @@
   #emojiBar.tampil { display: flex; }
   #emojiBar button { border: none; background: none; font-size: 24px; cursor: pointer; padding: 4px 5px; border-radius: 8px; }
   #emojiBar button:active { background: #f0f2f5; }
-  .kotak textarea { flex: 1; border: none; outline: none; resize: none; font: inherit; font-size: 15px;
+  .kotak textarea { flex: 1; border: none; outline: none; resize: none; font: inherit; font-size: 16px;
                     max-height: 120px; padding: 7px 0; background: transparent; color: #111b21; }
   #kirim { flex: none; width: 48px; height: 48px; border: none; border-radius: 50%; background: #00a884;
            color: #fff; font-size: 20px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.3);
@@ -139,7 +139,12 @@ let ids = [];
 try { ids = JSON.parse(localStorage.getItem("bridge_ids") || "[]"); } catch (e) { ids = []; }
 const lama = localStorage.getItem("bridge_utas");
 if (lama && !ids.includes(lama)) { ids.push(lama); simpanIds(); }
-function simpanIds() { localStorage.setItem("bridge_ids", JSON.stringify(ids)); }
+function simpanIds() {
+  // Batasi daftar utas yang disimpan/dicek halaman (50 terakhir) —
+  // dulu tumbuh tanpa batas sehingga polling makin berat.
+  if (ids.length > 50) ids = ids.slice(-50);
+  localStorage.setItem("bridge_ids", JSON.stringify(ids));
+}
 
 const utasCache = {};   // id -> data utas terakhir dari server
 
@@ -211,19 +216,39 @@ function gambar() {
       html += `<div class="baris kiri"><div class="gelembung mengetik"><span></span><span></span><span></span></div></div>`;
     }
   }
+  // Posisi gulir dijaga: hanya ikut ke bawah bila pengunjung memang
+  // sedang di dekat bawah; kalau lagi membaca ke atas, jangan ditarik.
+  const dekatBawah = layar.scrollHeight - layar.scrollTop - layar.clientHeight < 140;
+  const gulirLama = layar.scrollTop;
   kolom.innerHTML = html;
   statusEl.textContent = menunggu ? "mengetik…" : "online";
-  layar.scrollTop = layar.scrollHeight;
+  if (dekatBawah) layar.scrollTop = layar.scrollHeight;
+  else layar.scrollTop = gulirLama;
 }
 
+let putaran = 0;
 async function segarkan() {
+  putaran++;
+  let berubah = false;
   for (const id of ids) {
+    const lama = utasCache[id];
+    // Utas yang sudah terjawab lengkap hanya dicek ulang tiap 10
+    // putaran (balasan susulan dari Alive tetap tertangkap, tapi
+    // tidak membebani server/baterai tiap 3 detik).
+    const sudahFinal = lama && lama.dibaca && lama.balasan && lama.balasan.length;
+    if (sudahFinal && putaran % 10 !== 0) continue;
     try {
       const r = await fetch("/api/utas/" + id);
-      if (r.ok) utasCache[id] = await r.json();
+      if (r.ok) {
+        const baru = await r.json();
+        if (JSON.stringify(baru) !== JSON.stringify(lama)) berubah = true;
+        utasCache[id] = baru;
+      }
     } catch (e) { /* jaringan putus sesaat, coba lagi nanti */ }
   }
-  gambar();
+  // Gambar ulang HANYA bila ada perubahan — dulu tiap 3 detik DOM
+  // dibangun ulang penuh walau tidak ada yang berubah.
+  if (berubah) gambar();
 }
 
 async function kirim() {
