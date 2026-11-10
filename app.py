@@ -43,12 +43,20 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+# Pilihan owner 2026-11-10: boleh pakai Gemini. Bila GEMINI_API_KEY
+# terpasang, Gemini yang dipakai (diutamakan); Groq jadi pilihan kedua.
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_URL = ("https://generativelanguage.googleapis.com/v1beta/models/"
+              + GEMINI_MODEL + ":generateContent")
+
 try:
     _PERSONA = (BASE / "persona-ai-web.md").read_text(encoding="utf-8")
 except Exception:
     _PERSONA = ""
 
-AI_INSTAN_AKTIF = bool(GROQ_API_KEY and _PERSONA)
+AI_PROVIDER = "gemini" if GEMINI_API_KEY else ("groq" if GROQ_API_KEY else "")
+AI_INSTAN_AKTIF = bool(AI_PROVIDER and _PERSONA)
 
 MAKS_NAMA = 50
 MAKS_ISI = 2000
@@ -140,9 +148,9 @@ def _perangkat_ringkas(ua: str) -> str:
     return " · ".join(bagian)[:120]
 
 
-# ---------- AI instan (Groq) ----------
+# ---------- AI instan (Gemini / Groq) ----------
 
-def _panggil_ai(riwayat: list[dict]) -> str:
+def _panggil_groq(riwayat: list[dict]) -> str:
     """Panggil API chat Groq; kembalikan teks balasan. Lempar bila gagal."""
     muatan = json.dumps({
         "model": GROQ_MODEL,
@@ -162,6 +170,45 @@ def _panggil_ai(riwayat: list[dict]) -> str:
     with urllib.request.urlopen(req, timeout=30) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     return str(data["choices"][0]["message"]["content"]).strip()[:MAKS_ISI]
+
+
+def _format_gemini(riwayat: list[dict]) -> dict:
+    """Ubah riwayat gaya OpenAI (system/user/assistant) ke format
+    generateContent Gemini: persona jadi systemInstruction, sisanya
+    jadi contents dengan peran user/model."""
+    isi: dict = {"contents": []}
+    for m in riwayat:
+        if m["role"] == "system":
+            isi["systemInstruction"] = {"parts": [{"text": m["content"]}]}
+        else:
+            peran = "model" if m["role"] == "assistant" else "user"
+            isi["contents"].append({"role": peran, "parts": [{"text": m["content"]}]})
+    isi["generationConfig"] = {"temperature": 0.7, "maxOutputTokens": 400}
+    return isi
+
+
+def _panggil_gemini(riwayat: list[dict]) -> str:
+    """Panggil API Gemini; kembalikan teks balasan. Lempar bila gagal."""
+    muatan = json.dumps(_format_gemini(riwayat)).encode("utf-8")
+    req = urllib.request.Request(
+        GEMINI_URL,
+        data=muatan,
+        headers={
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY,
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    bagian = data["candidates"][0]["content"]["parts"]
+    return "".join(str(b.get("text", "")) for b in bagian).strip()[:MAKS_ISI]
+
+
+def _panggil_ai(riwayat: list[dict]) -> str:
+    if AI_PROVIDER == "gemini":
+        return _panggil_gemini(riwayat)
+    return _panggil_groq(riwayat)
 
 
 def _susun_riwayat(p: dict) -> list[dict]:
@@ -223,6 +270,7 @@ def health():
         "total_pesan": len(_pesan),
         "belum_dibaca": sum(1 for p in _pesan if not p["dibaca"]),
         "ai_instan": AI_INSTAN_AKTIF,
+        "ai_provider": AI_PROVIDER or None,
     }
 
 
