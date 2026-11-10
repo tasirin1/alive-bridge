@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tasirin (AI)</title>
+<title>Rudy Tasirin</title>
 <style>
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -21,12 +21,19 @@
   #baru { flex: none; border: none; background: transparent; color: #fff; font-size: 20px;
           cursor: pointer; padding: 6px 8px; border-radius: 50%; }
   #baru:active { background: rgba(255,255,255,.15); }
+  .menu-bungkus { position: relative; flex: none; }
+  #menu { position: absolute; right: 0; top: 46px; background: #fff; color: #111b21; border-radius: 6px;
+          box-shadow: 0 4px 16px rgba(0,0,0,.3); min-width: 170px; padding: 6px 0; display: none; z-index: 20; }
+  #menu.tampil { display: block; }
+  #menu button { display: block; width: 100%; border: none; background: none; text-align: left;
+                 padding: 10px 18px; font-size: 14.5px; cursor: pointer; color: #111b21; }
+  #menu button:active { background: #f0f2f5; }
 
   /* ===== area obrolan ===== */
   main { flex: 1; overflow-y: auto;
          background-color: #e5ddd5;
-         background-image: radial-gradient(rgba(0,0,0,.055) 1px, transparent 1.4px);
-         background-size: 22px 22px; }
+         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cg fill='none' stroke='%23c8bba6' stroke-width='1.6' opacity='0.55'%3E%3Ccircle cx='24' cy='24' r='7'/%3E%3Cpath d='M104 14v16M96 22h16'/%3E%3Cpolyline points='8,96 22,82 36,96 50,82'/%3E%3Cpath d='M118 108l5 9 10 1-7 7 2 10-10-5-9 5 2-10-7-7 10-1z'/%3E%3Cpath d='M60 130c6-6 12 6 18 0'/%3E%3Ccircle cx='142' cy='58' r='3.5'/%3E%3Cpath d='M66 44c4 4 4 8 0 12M74 44c4 4 4 8 0 12'/%3E%3C/g%3E%3C/svg%3E");
+         background-size: 160px 160px; }
   .kolom { max-width: 860px; margin: 0 auto; padding: 12px 10px 6px;
            display: flex; flex-direction: column; }
 
@@ -44,6 +51,10 @@
                white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
   .kanan .gelembung { background: #d9fdd3; border-top-right-radius: 0; }
   .kiri .gelembung { background: #fff; border-top-left-radius: 0; }
+  .kanan .gelembung::after { content: ""; position: absolute; top: 0; right: -8px; width: 0; height: 0;
+                             border-top: 8px solid #d9fdd3; border-right: 8px solid transparent; }
+  .kiri .gelembung::after { content: ""; position: absolute; top: 0; left: -8px; width: 0; height: 0;
+                            border-top: 8px solid #fff; border-left: 8px solid transparent; }
   .meta { float: right; display: flex; align-items: center; gap: 3px;
           margin: 10px 0 0 10px; font-size: 11px; color: #667781; user-select: none; }
   .centang { font-size: 12px; letter-spacing: -3px; margin-right: 3px; }
@@ -67,7 +78,14 @@
   footer { background: #f0ebe5; padding: 6px 8px 8px; }
   .bungkus { max-width: 860px; margin: 0 auto; display: flex; align-items: flex-end; gap: 6px; }
   .kotak { flex: 1; display: flex; align-items: flex-end; background: #fff; border-radius: 24px;
-           padding: 6px 6px 6px 16px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+           padding: 6px 6px 6px 8px; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  #emojiBtn { flex: none; border: none; background: none; font-size: 22px; cursor: pointer;
+              padding: 4px 4px 6px; line-height: 1; opacity: .65; }
+  #emojiBar { display: none; max-width: 860px; margin: 0 auto 6px; background: #fff; border-radius: 16px;
+              box-shadow: 0 1px 3px rgba(0,0,0,.18); padding: 8px 10px; flex-wrap: wrap; gap: 2px; }
+  #emojiBar.tampil { display: flex; }
+  #emojiBar button { border: none; background: none; font-size: 24px; cursor: pointer; padding: 4px 5px; border-radius: 8px; }
+  #emojiBar button:active { background: #f0f2f5; }
   .kotak textarea { flex: 1; border: none; outline: none; resize: none; font: inherit; font-size: 15px;
                     max-height: 120px; padding: 7px 0; background: transparent; color: #111b21; }
   #kirim { flex: none; width: 48px; height: 48px; border: none; border-radius: 50%; background: #00a884;
@@ -79,12 +97,17 @@
 <body>
 
 <header>
-  <div class="ava-profil">T</div>
+  <div class="ava-profil">R</div>
   <div class="siapa">
-    <div class="nama">Tasirin (AI)</div>
+    <div class="nama">Rudy Tasirin</div>
     <div class="status" id="status">online</div>
   </div>
-  <button id="baru" title="Mulai obrolan baru di peramban ini">⋮</button>
+  <div class="menu-bungkus">
+    <button id="baru" title="Menu">⋮</button>
+    <div id="menu">
+      <button id="menuBaru">Obrolan baru</button>
+    </div>
+  </div>
 </header>
 
 <main id="layar">
@@ -92,8 +115,10 @@
 </main>
 
 <footer>
+  <div id="emojiBar"></div>
   <div class="bungkus">
     <div class="kotak">
+      <button id="emojiBtn" title="Emoji">😊</button>
       <textarea id="pesan" rows="1" placeholder="Ketik pesan" maxlength="2000"></textarea>
     </div>
     <button id="kirim" title="Kirim" disabled>➤</button>
@@ -125,7 +150,7 @@ const SARAN = [
   "gimana cara belajar ai menurutmu?"
 ];
 
-const INFO = "🔒 yang jawab ai kloningan tasirin, dibentuk dari cara berpikir dan tulisannya — bukan tasirin yang asli, dan jawabannya bisa salah. ip sama perangkat kamu dicatat biar ai-nya kenal kamu; yang bisa lihat cuma tasirin sama ai-nya.";
+const INFO = "🔒 yang jawab di sini perwakilan tasirin, dibentuk dari cara berpikir dan tulisannya — bukan tasirin langsung, dan jawabannya bisa salah. ip sama perangkat kamu dicatat biar kenal kamu; yang bisa lihat cuma tasirin.";
 
 function jam(iso) {
   if (!iso) return "";
@@ -154,7 +179,7 @@ function gambar() {
   if (!ids.length) {
     html += `<div class="kosong">
       <h1>halo, mau nanya apa?</h1>
-      <p>yang jawab ai kloningan tasirin. tanya aja kayak ngobrol biasa.</p>
+      <p>tanya aja kayak ngobrol biasa, santai.</p>
       <div class="saran">${SARAN.map(s => `<button data-saran="${el(s)}">${el(s)}</button>`).join("")}</div>
     </div>`;
     kolom.innerHTML = html;
@@ -234,11 +259,35 @@ kotakPesan.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); kirim(); }
 });
 tombolKirim.addEventListener("click", kirim);
-document.getElementById("baru").addEventListener("click", () => {
+
+const menuEl = document.getElementById("menu");
+document.getElementById("baru").addEventListener("click", e => {
+  e.stopPropagation();
+  menuEl.classList.toggle("tampil");
+});
+document.addEventListener("click", e => {
+  if (!menuEl.contains(e.target)) menuEl.classList.remove("tampil");
+});
+document.getElementById("menuBaru").addEventListener("click", () => {
+  menuEl.classList.remove("tampil");
   if (!confirm("Mulai obrolan baru? Riwayat obrolan di peramban ini akan dibersihkan.")) return;
   ids = []; simpanIds();
   for (const k of Object.keys(utasCache)) delete utasCache[k];
   gambar();
+});
+
+const emojiBar = document.getElementById("emojiBar");
+const EMOJIS = ["😀","😂","😊","😍","😅","😭","🙏","👍","❤️","🔥","😴","🤔","😮","👋","💪","🙂"];
+emojiBar.innerHTML = EMOJIS.map(e => `<button data-emoji="${e}">${e}</button>`).join("");
+emojiBar.querySelectorAll("[data-emoji]").forEach(b =>
+  b.addEventListener("click", () => {
+    kotakPesan.value += b.dataset.emoji;
+    kotakPesan.focus();
+    aturTombol();
+  }));
+document.getElementById("emojiBtn").addEventListener("click", () => {
+  emojiBar.classList.toggle("tampil");
+  kotakPesan.focus();
 });
 
 gambar();
