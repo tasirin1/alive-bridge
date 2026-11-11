@@ -18,6 +18,7 @@ Keamanan sederhana (pola yang sama dengan alive-games):
 import json
 import os
 import threading
+import time
 import urllib.request
 import uuid
 from datetime import datetime, timezone
@@ -268,19 +269,24 @@ def _panggil_gemini(riwayat: list[dict]) -> str:
 
 
 def _panggil_ai(riwayat: list[dict]) -> str:
-    """Coba provider utama dulu, lalu cadangan berikutnya dalam rantai.
-    Lempar galat terakhir bila semua provider gagal."""
+    """Coba provider utama dulu, lalu cadangan berikutnya dalam rantai,
+    dua putaran (putaran kedua sesudah jeda singkat — galat sesaat
+    seperti 429 sering pulih sendiri). Lempar galat terakhir bila
+    semua provider gagal."""
     galat_terakhir: Exception | None = None
-    for nama in AI_RANTAI:
-        try:
-            if nama == "gemini":
-                return _panggil_gemini(riwayat)
-            if nama == "openrouter":
-                return _panggil_openrouter(riwayat)
-            return _panggil_groq(riwayat)
-        except Exception as e:
-            galat_terakhir = e
-            print(f"[ai-instan] provider {nama} gagal: {e}", flush=True)
+    for putaran in range(2):
+        if putaran:
+            time.sleep(5)
+        for nama in AI_RANTAI:
+            try:
+                if nama == "gemini":
+                    return _panggil_gemini(riwayat)
+                if nama == "openrouter":
+                    return _panggil_openrouter(riwayat)
+                return _panggil_groq(riwayat)
+            except Exception as e:
+                galat_terakhir = e
+                print(f"[ai-instan] provider {nama} gagal: {e}", flush=True)
     if galat_terakhir is not None:
         raise galat_terakhir
     raise RuntimeError("tidak ada provider AI yang terpasang")
@@ -344,11 +350,29 @@ def _balas_instan(pid: str) -> None:
 
 @app.get("/api/health")
 def health():
+    # menunggu_balasan: pesan yang sudah lewat masa wajar balas
+    # instan (30 detik) tapi belum ada balasannya — tanda semua
+    # provider gagal. Penjaga Alive bangun dari angka ini (celah
+    # lama: penjaga hanya bangun dari belum_dibaca, padahal pesan
+    # yang gagal justru sudah ditandai dibaca). Yang dibuka ke
+    # publik hanya JUMLAH-nya, tanpa isi/pengirim apa pun.
+    kini = datetime.now(timezone.utc)
+    menunggu = 0
+    for p in _pesan:
+        if p.get("balasan"):
+            continue
+        try:
+            umur = (kini - datetime.fromisoformat(p["waktu"])).total_seconds()
+        except Exception:
+            umur = 0
+        if umur > 30:
+            menunggu += 1
     return {
         "ok": True,
         "layanan": "alive-bridge",
         "total_pesan": len(_pesan),
         "belum_dibaca": sum(1 for p in _pesan if not p["dibaca"]),
+        "menunggu_balasan": menunggu,
         "ai_instan": AI_INSTAN_AKTIF,
         "ai_provider": AI_PROVIDER or None,
         "ai_cadangan": AI_CADANGAN or None,
