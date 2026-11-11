@@ -23,8 +23,6 @@
   #baru:active { background: rgba(255,255,255,.15); }
   .menu-bungkus { position: relative; flex: none; }
   .panah-balik { flex: none; font-size: 19px; margin-right: -2px; opacity: .95; }
-  .ikon-hd { flex: none; display: flex; align-items: center; gap: 20px; padding: 0 2px 0 6px; }
-  .ikon-hd svg { display: block; fill: #fff; opacity: .95; }
   #menu { position: absolute; right: 0; top: 46px; background: #fff; color: #111b21; border-radius: 6px;
           box-shadow: 0 4px 16px rgba(0,0,0,.3); min-width: 170px; padding: 6px 0; display: none; z-index: 20; }
   #menu.tampil { display: block; }
@@ -107,10 +105,6 @@
     <div class="nama">Rudy Tasirin</div>
     <div class="status" id="status">online</div>
   </div>
-  <div class="ikon-hd" aria-hidden="true">
-    <svg width="22" height="22" viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.3 21 3 13.7 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg>
-  </div>
   <div class="menu-bungkus">
     <button id="baru" title="Menu">⋮</button>
     <div id="menu">
@@ -130,7 +124,7 @@
       <button id="emojiBtn" title="Emoji">😊</button>
       <textarea id="pesan" rows="1" placeholder="Ketik pesan" maxlength="2000"></textarea>
     </div>
-    <button id="kirim" title="Kirim">🎤</button>
+    <button id="kirim" title="Kirim" disabled>➤</button>
   </div>
 </footer>
 
@@ -283,11 +277,7 @@ async function kirim() {
 }
 
 function aturTombol() {
-  // Ala WhatsApp asli: kotak kosong -> tombol mikrofon; ada teks ->
-  // tombol kirim. Klik mikrofon tidak melakukan apa-apa di sini.
-  const adaTeks = !!kotakPesan.value.trim();
-  tombolKirim.textContent = adaTeks ? "➤" : "🎤";
-  tombolKirim.disabled = false;
+  tombolKirim.disabled = !kotakPesan.value.trim();
   kotakPesan.style.height = "auto";
   kotakPesan.style.height = Math.min(kotakPesan.scrollHeight, 120) + "px";
 }
@@ -328,7 +318,6 @@ document.getElementById("emojiBtn").addEventListener("click", () => {
   kotakPesan.focus();
 });
 
-aturTombol();
 gambar();
 segarkan();
 setInterval(segarkan, 3000);
