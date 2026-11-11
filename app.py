@@ -44,31 +44,37 @@ GROQ_MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # Pilihan owner 2026-11-10: boleh pakai Gemini. Bila GEMINI_API_KEY
-# terpasang, Gemini yang dipakai (diutamakan); Groq jadi pilihan kedua.
+# terpasang, Gemini yang dipakai (diutamakan); urutan cadangan
+# sesudahnya: OpenRouter, lalu Groq (lihat _PRIORITAS di bawah).
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_URL = ("https://generativelanguage.googleapis.com/v1beta/models/"
               + GEMINI_MODEL + ":generateContent")
+
+# Cadangan pilihan owner 2026-11-11 ("selain groq" → "OpenRouter aja"):
+# satu kunci untuk banyak model; format chat-nya OpenAI (sama seperti
+# Groq). Model bawaan = varian gratis Llama 3.3 70B; bisa diganti
+# lewat env OPENROUTER_MODEL.
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL",
+                                  "meta-llama/llama-3.3-70b-instruct:free")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 try:
     _PERSONA = (BASE / "persona-ai-web.md").read_text(encoding="utf-8")
 except Exception:
     _PERSONA = ""
 
-AI_PROVIDER = "gemini" if GEMINI_API_KEY else ("groq" if GROQ_API_KEY else "")
-
-# Rantai cadangan (perintah owner 2026-11-10): provider utama dicoba
-# dulu; bila gagal (kuota habis, API mati, dsb.) otomatis pindah ke
-# provider berikutnya yang kuncinya terpasang. Bila semua gagal, pesan
+# Rantai cadangan (perintah owner 2026-11-10, diperluas 2026-11-11):
+# provider dicoba berurutan menurut daftar prioritas ini — Gemini
+# (pilihan utama owner), lalu OpenRouter (cadangan pilihan owner),
+# lalu Groq — hanya yang kuncinya terpasang. Bila semua gagal, pesan
 # tertinggal tanpa balasan dan penjaga Alive jadi cadangan terakhir.
-AI_RANTAI = []
-if GEMINI_API_KEY:
-    AI_RANTAI.append("gemini")
-if GROQ_API_KEY:
-    AI_RANTAI.append("groq")
-if AI_PROVIDER and AI_PROVIDER in AI_RANTAI:
-    AI_RANTAI.remove(AI_PROVIDER)
-    AI_RANTAI.insert(0, AI_PROVIDER)
+_PRIORITAS = ["gemini", "openrouter", "groq"]
+_KUNCI = {"gemini": GEMINI_API_KEY, "openrouter": OPENROUTER_API_KEY,
+          "groq": GROQ_API_KEY}
+AI_RANTAI = [n for n in _PRIORITAS if _KUNCI[n]]
+AI_PROVIDER = AI_RANTAI[0] if AI_RANTAI else ""
 AI_CADANGAN = AI_RANTAI[1] if len(AI_RANTAI) > 1 else ""
 
 AI_INSTAN_AKTIF = bool(AI_PROVIDER and _PERSONA)
@@ -205,6 +211,29 @@ def _panggil_groq(riwayat: list[dict]) -> str:
     return str(data["choices"][0]["message"]["content"]).strip()[:MAKS_ISI]
 
 
+def _panggil_openrouter(riwayat: list[dict]) -> str:
+    """Panggil API chat OpenRouter (format OpenAI); kembalikan teks
+    balasan. Lempar bila gagal."""
+    muatan = json.dumps({
+        "model": OPENROUTER_MODEL,
+        "messages": riwayat,
+        "temperature": 0.7,
+        "max_tokens": 400,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        OPENROUTER_URL,
+        data=muatan,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return str(data["choices"][0]["message"]["content"]).strip()[:MAKS_ISI]
+
+
 def _format_gemini(riwayat: list[dict]) -> dict:
     """Ubah riwayat gaya OpenAI (system/user/assistant) ke format
     generateContent Gemini: persona jadi systemInstruction, sisanya
@@ -246,6 +275,8 @@ def _panggil_ai(riwayat: list[dict]) -> str:
         try:
             if nama == "gemini":
                 return _panggil_gemini(riwayat)
+            if nama == "openrouter":
+                return _panggil_openrouter(riwayat)
             return _panggil_groq(riwayat)
         except Exception as e:
             galat_terakhir = e
