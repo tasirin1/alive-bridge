@@ -49,6 +49,11 @@ GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 # sesudahnya: OpenRouter, lalu Groq (lihat _PRIORITAS di bawah).
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+# Model Gemini kedua dengan ember kuota TERPISAH dari model utama:
+# bila kuota/batas model utama yang bermasalah (pola kejadian
+# 2026-11-11: beberapa balasan jalan lalu mati), model lite ini
+# sering masih bisa menjawab pakai kunci yang sama.
+GEMINI_LITE_MODEL = os.environ.get("GEMINI_LITE_MODEL", "gemini-2.5-flash-lite")
 GEMINI_URL = ("https://generativelanguage.googleapis.com/v1beta/models/"
               + GEMINI_MODEL + ":generateContent")
 
@@ -68,12 +73,13 @@ except Exception:
 
 # Rantai cadangan (perintah owner 2026-11-10, diperluas 2026-11-11):
 # provider dicoba berurutan menurut daftar prioritas ini — Gemini
-# (pilihan utama owner), lalu OpenRouter (cadangan pilihan owner),
-# lalu Groq — hanya yang kuncinya terpasang. Bila semua gagal, pesan
-# tertinggal tanpa balasan dan penjaga Alive jadi cadangan terakhir.
-_PRIORITAS = ["gemini", "openrouter", "groq"]
-_KUNCI = {"gemini": GEMINI_API_KEY, "openrouter": OPENROUTER_API_KEY,
-          "groq": GROQ_API_KEY}
+# (pilihan utama owner), Gemini Lite (ember kuota terpisah, kunci
+# sama), OpenRouter (cadangan pilihan owner), lalu Groq — hanya
+# yang kuncinya terpasang. Bila semua gagal, pesan tertinggal
+# tanpa balasan dan penjaga Alive jadi cadangan terakhir.
+_PRIORITAS = ["gemini", "gemini-lite", "openrouter", "groq"]
+_KUNCI = {"gemini": GEMINI_API_KEY, "gemini-lite": GEMINI_API_KEY,
+          "openrouter": OPENROUTER_API_KEY, "groq": GROQ_API_KEY}
 AI_RANTAI = [n for n in _PRIORITAS if _KUNCI[n]]
 AI_PROVIDER = AI_RANTAI[0] if AI_RANTAI else ""
 AI_CADANGAN = AI_RANTAI[1] if len(AI_RANTAI) > 1 else ""
@@ -250,11 +256,13 @@ def _format_gemini(riwayat: list[dict]) -> dict:
     return isi
 
 
-def _panggil_gemini(riwayat: list[dict]) -> str:
+def _panggil_gemini(riwayat: list[dict], model: str = "") -> str:
     """Panggil API Gemini; kembalikan teks balasan. Lempar bila gagal."""
+    url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+           + (model or GEMINI_MODEL) + ":generateContent")
     muatan = json.dumps(_format_gemini(riwayat)).encode("utf-8")
     req = urllib.request.Request(
-        GEMINI_URL,
+        url,
         data=muatan,
         headers={
             "Content-Type": "application/json",
@@ -281,6 +289,8 @@ def _panggil_ai(riwayat: list[dict]) -> str:
             try:
                 if nama == "gemini":
                     return _panggil_gemini(riwayat)
+                if nama == "gemini-lite":
+                    return _panggil_gemini(riwayat, GEMINI_LITE_MODEL)
                 if nama == "openrouter":
                     return _panggil_openrouter(riwayat)
                 return _panggil_groq(riwayat)
@@ -309,6 +319,20 @@ def _susun_riwayat(p: dict) -> list[dict]:
     return riwayat
 
 
+def _catat_galat(pid: str, galat: str) -> None:
+    """Simpan galat AI terakhir di catatan pesan — HANYA terbaca
+    lewat endpoint token (dibuang dari tampilan publik), supaya
+    Alive bisa membaca sebab gagal yang sebenarnya tanpa perlu
+    membuka log server. Dihapus lagi bila balasan berhasil."""
+    with _lock:
+        try:
+            p = _cari(pid)
+        except Exception:
+            return
+        p["galat_ai"] = str(galat)[:300]
+        _save()
+
+
 def _balas_instan(pid: str) -> None:
     """Jalan di benang terpisah: tandai dibaca dulu (centang biru),
     baru panggil AI, lalu simpan balasan. Gagal panggil = diam saja;
@@ -325,15 +349,18 @@ def _balas_instan(pid: str) -> None:
         salinan = dict(p)
     if not _sema_ai.acquire(timeout=90):
         print(f"[ai-instan] antrean AI penuh, lewati {pid}", flush=True)
+        _catat_galat(pid, "antrean AI penuh (semafor menunggu 90 detik)")
         return
     try:
         teks = _panggil_ai(_susun_riwayat(salinan))
     except Exception as e:
         print(f"[ai-instan] gagal memanggil API untuk {pid}: {e}", flush=True)
+        _catat_galat(pid, e)
         return
     finally:
         _sema_ai.release()
     if not teks:
+        _catat_galat(pid, "semua provider mengembalikan teks kosong")
         return
     with _lock:
         try:
@@ -343,6 +370,7 @@ def _balas_instan(pid: str) -> None:
         if p["balasan"]:
             return
         p["balasan"].append({"isi": teks, "waktu": _now()})
+        p.pop("galat_ai", None)
         _save()
 
 
@@ -441,7 +469,7 @@ def lihat_utas(pid: str):
     with _lock:
         tampil = dict(_cari(pid))
     # Catatan pengirim tidak ditampilkan ke publik, hanya untuk Alive.
-    for kunci in ("ip", "perangkat", "ua", "konteks"):
+    for kunci in ("ip", "perangkat", "ua", "konteks", "galat_ai"):
         tampil.pop(kunci, None)
     return tampil
 
