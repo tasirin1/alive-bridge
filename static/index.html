@@ -22,6 +22,9 @@
           cursor: pointer; padding: 6px 8px; border-radius: 50%; }
   #baru:active { background: rgba(255,255,255,.15); }
   .menu-bungkus { position: relative; flex: none; }
+  .panah-balik { flex: none; font-size: 19px; margin-right: -2px; opacity: .95; }
+  .ikon-hd { flex: none; display: flex; align-items: center; gap: 20px; padding: 0 2px 0 6px; }
+  .ikon-hd svg { display: block; fill: #fff; opacity: .95; }
   #menu { position: absolute; right: 0; top: 46px; background: #fff; color: #111b21; border-radius: 6px;
           box-shadow: 0 4px 16px rgba(0,0,0,.3); min-width: 170px; padding: 6px 0; display: none; z-index: 20; }
   #menu.tampil { display: block; }
@@ -31,9 +34,9 @@
 
   /* ===== area obrolan ===== */
   main { flex: 1; overflow-y: auto;
-         background-color: #e5ddd5;
-         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cg fill='none' stroke='%23c8bba6' stroke-width='1.6' opacity='0.55'%3E%3Ccircle cx='24' cy='24' r='7'/%3E%3Cpath d='M104 14v16M96 22h16'/%3E%3Cpolyline points='8,96 22,82 36,96 50,82'/%3E%3Cpath d='M118 108l5 9 10 1-7 7 2 10-10-5-9 5 2-10-7-7 10-1z'/%3E%3Cpath d='M60 130c6-6 12 6 18 0'/%3E%3Ccircle cx='142' cy='58' r='3.5'/%3E%3Cpath d='M66 44c4 4 4 8 0 12M74 44c4 4 4 8 0 12'/%3E%3C/g%3E%3C/svg%3E");
-         background-size: 160px 160px; }
+         background-color: #ece5dd;
+         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cg fill='none' stroke='%23cfc4b2' stroke-width='1.1' opacity='0.5'%3E%3Ccircle cx='30' cy='28' r='8'/%3E%3Cpath d='M120 16v15M113 23h15'/%3E%3Cpolyline points='10,110 24,96 38,110 52,96'/%3E%3Cpath d='M132 122l4 8 9 1-6 6 1 9-8-4-7 4 1-9-6-6 9-1z'/%3E%3Cpath d='M66 146c5-5 10 5 15 0'/%3E%3Ccircle cx='158' cy='66' r='3'/%3E%3Cpath d='M74 50c3 3 3 7 0 10M81 50c3 3 3 7 0 10'/%3E%3Crect x='96' y='66' width='13' height='9' rx='2'/%3E%3Cpath d='M20 160l6-6 6 6M140 30l4 4M148 30l-4 4'/%3E%3Cpath d='M48 66q5-6 10 0q-5 6-10 0z'/%3E%3Ccircle cx='104' cy='160' r='2.4'/%3E%3Cpath d='M156 96c4 0 6 3 6 6M28 44c2 4 6 4 8 0'/%3E%3C/g%3E%3C/svg%3E");
+         background-size: 180px 180px; }
   .kolom { max-width: 860px; margin: 0 auto; padding: 12px 10px 6px;
            display: flex; flex-direction: column; }
 
@@ -51,14 +54,15 @@
                white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere; }
   .kanan .gelembung { background: #d9fdd3; border-top-right-radius: 0; }
   .kiri .gelembung { background: #fff; border-top-left-radius: 0; }
-  .kanan .gelembung::after { content: ""; position: absolute; top: 0; right: -8px; width: 0; height: 0;
-                             border-top: 8px solid #d9fdd3; border-right: 8px solid transparent; }
-  .kiri .gelembung::after { content: ""; position: absolute; top: 0; left: -8px; width: 0; height: 0;
-                            border-top: 8px solid #fff; border-left: 8px solid transparent; }
+  .kanan .gelembung::after { content: ""; position: absolute; top: 0; right: -7px; width: 8px; height: 11px;
+                             background: #d9fdd3; clip-path: polygon(0 0, 100% 0, 0 100%); }
+  .kiri .gelembung::after { content: ""; position: absolute; top: 0; left: -7px; width: 8px; height: 11px;
+                            background: #fff; clip-path: polygon(0 0, 100% 0, 100% 100%); }
   .meta { float: right; display: flex; align-items: center; gap: 3px;
           margin: 10px 0 0 10px; font-size: 11px; color: #667781; user-select: none; }
-  .centang { font-size: 12px; letter-spacing: -3px; margin-right: 3px; }
+  .centang { display: inline-flex; color: #8696a0; margin-left: 1px; }
   .centang.baca { color: #53bdeb; }
+  .centang svg { display: block; }
 
   .mengetik { display: flex; align-items: center; gap: 4px; padding: 12px 14px; }
   .mengetik span { width: 8px; height: 8px; border-radius: 50%; background: #b6b6b6; animation: lompat 1.2s infinite; }
@@ -97,10 +101,15 @@
 <body>
 
 <header>
+  <span class="panah-balik">←</span>
   <div class="ava-profil">R</div>
   <div class="siapa">
     <div class="nama">Rudy Tasirin</div>
     <div class="status" id="status">online</div>
+  </div>
+  <div class="ikon-hd" aria-hidden="true">
+    <svg width="22" height="22" viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+    <svg width="20" height="20" viewBox="0 0 24 24"><path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.3 21 3 13.7 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.25 1.02l-2.2 2.2z"/></svg>
   </div>
   <div class="menu-bungkus">
     <button id="baru" title="Menu">⋮</button>
@@ -121,7 +130,7 @@
       <button id="emojiBtn" title="Emoji">😊</button>
       <textarea id="pesan" rows="1" placeholder="Ketik pesan" maxlength="2000"></textarea>
     </div>
-    <button id="kirim" title="Kirim" disabled>➤</button>
+    <button id="kirim" title="Kirim">🎤</button>
   </div>
 </footer>
 
@@ -203,7 +212,7 @@ function gambar() {
       hariTerakhir = kh;
       html += `<div class="tanggal">${el(labelTanggal(u.waktu))}</div>`;
     }
-    const centang = `<span class="centang${u.dibaca ? " baca" : ""}">✓✓</span>`;
+    const centang = `<span class="centang${u.dibaca ? " baca" : ""}"><svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M0.7 6.2 L3.7 9.4 L9.7 1.4"/><path d="M6.2 9.4 L7.6 9.9 L13.9 1.4"/></svg></span>`;
     html += `<div class="baris kanan"><div class="gelembung">${el(u.isi)}<span class="meta">${jam(u.waktu)} ${centang}</span></div></div>`;
     if (u.balasan && u.balasan.length) {
       for (const b of u.balasan) {
@@ -274,7 +283,11 @@ async function kirim() {
 }
 
 function aturTombol() {
-  tombolKirim.disabled = !kotakPesan.value.trim();
+  // Ala WhatsApp asli: kotak kosong -> tombol mikrofon; ada teks ->
+  // tombol kirim. Klik mikrofon tidak melakukan apa-apa di sini.
+  const adaTeks = !!kotakPesan.value.trim();
+  tombolKirim.textContent = adaTeks ? "➤" : "🎤";
+  tombolKirim.disabled = false;
   kotakPesan.style.height = "auto";
   kotakPesan.style.height = Math.min(kotakPesan.scrollHeight, 120) + "px";
 }
@@ -315,6 +328,7 @@ document.getElementById("emojiBtn").addEventListener("click", () => {
   kotakPesan.focus();
 });
 
+aturTombol();
 gambar();
 segarkan();
 setInterval(segarkan, 3000);
